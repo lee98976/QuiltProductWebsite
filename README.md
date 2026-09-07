@@ -39,9 +39,7 @@ The exporter refuses symbolic links and existing destinations.
 
 You can also move this whole original folder; its `.git` directory is already
 self-contained. For a fresh repository with no historical association, use the
-clean export. The enclosing app currently tracks this directory as a submodule;
-removing that entry from the app repository is a separate repository operation
-after the move. It is not needed to run or build the exported website.
+clean export. The separate website repository has no dependency on the enclosing app repository.
 
 ## Preview ownership
 
@@ -61,21 +59,68 @@ The surrounding phone frame owns the status-bar space; the iframe starts at zero
 inset. The larger preview keeps the same iframe mounted, supports Escape and
 keyboard focus containment, and fits its content viewport to the available height.
 
-## Editing and deployment
+## Publish on GitHub Pages
+
+This folder must be the **root of the GitHub repository**, with `package.json`
+and `.github/workflows/pages.yml` at the top level. Commit the source files,
+including the hidden `.github` folder and `.gitignore`; do not commit `node_modules`,
+`dist`, or `out`.
+
+1. In the repository, open **Settings → Pages → Build and deployment** and set
+   **Source** to **GitHub Actions** (one-time setup).
+2. Commit and **push** to the repository's default branch (currently `main`).
+3. The **Deploy website to GitHub Pages** workflow installs dependencies, checks
+   the code, exports the static site, checks its links, and deploys it.
+4. Find the published URL in the completed workflow's `github-pages` deployment.
+
+A local commit alone does not run GitHub Actions; it must be pushed. You can also
+run the workflow manually from the Actions tab. No deployment token or Cloudflare
+account is needed. The workflow gets the actual URL and repository prefix from
+GitHub Pages, so project sites, user sites, and configured custom domains work.
+For the current `lee98976/QuiltPrivacy` repository, the default URL is
+`https://lee98976.github.io/QuiltPrivacy/`.
+
+### Test the static build locally
+
+```sh
+npm ci
+npm run lint
+npm run typecheck
+npm run build:pages
+npm run test:pages
+```
+
+`out/` is the deployable static artifact: HTML, CSS, JavaScript, and the bundled
+preview. Serve it with a static HTTP server; it does not need a Worker or Node
+server in production. The privacy page is exported as `privacy/index.html`, so
+direct visits and refreshes work on Pages.
+
+To validate a repository prefix before deploying (macOS/Linux):
+
+```sh
+PAGES_BASE_PATH=/QuiltPrivacy SITE_URL=https://lee98976.github.io/QuiltPrivacy npm run build:pages
+PAGES_BASE_PATH=/QuiltPrivacy npm run test:pages
+```
+
+For that preview, mount the contents of `out/` at `/QuiltPrivacy/` in your static
+server. `PAGES_BASE_PATH` is optional for root/custom-domain builds. `SITE_URL`
+is the full published site URL including any repository path, used in social
+preview metadata. The workflow sets both automatically.
+
+The regular `npm run build`, `npm test`, and `npm run start` commands retain the
+existing server build for other hosts. GitHub Pages specifically uses
+`npm run build:pages` and uploads only `out/`.
+
+## Editing
 
 - `app/page.tsx`: homepage copy and sections.
 - `app/DemoFocus.tsx`: phone preview and larger view.
 - `app/HeroScreenScroller.tsx`: sample-screen slideshow.
 - `app/SiteHeader.tsx`: navigation.
+- `app/site-path.ts`: repository prefixes for raw links and assets.
 - `app/privacy/page.tsx`: privacy draft.
 - `app/globals.css`: layout and responsive styling.
 - `public/`: website-owned assets and bundled demo.
-
-Build output is `dist/client` plus `dist/server/index.js`, for a Cloudflare Workers
-compatible host. Serve the website at the domain root (including `/flutter-demo/`).
-The current website has no database or account backend; unused database and
-authentication starter code has been removed. Optional hosting configuration is
-project-local. No hosting account is carried into the clean export.
 
 The screenshot carousel, store availability, sign-in link, and privacy contact
 section retain their existing placeholder/draft status. Supply approved screenshots,

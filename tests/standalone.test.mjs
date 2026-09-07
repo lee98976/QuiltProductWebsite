@@ -17,11 +17,11 @@ test("demo owns its assets and contains only dummy Firebase configuration", asyn
   const projects = [...bundle.matchAll(/([\w-]+)\.(?:firebaseapp\.com|firebasestorage\.app)/g)];
   assert.ok(projects.length > 0);
   for (const match of projects) assert.equal(match[1], "quilt-demo-public");
-  assert.match(bootstrap, /canvasKitBaseUrl: "\/flutter-demo\/canvaskit\/"/);
+  assert.match(bootstrap, /canvasKitBaseUrl: new URL\("canvaskit\/", document.baseURI\)\.href/);
   assert.doesNotMatch(html, /quilt-demo-safe-top|inset:\s*76px/);
   for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
     const path = match[1];
-    if (path.startsWith("/")) continue;
+    if (path.startsWith("/") || path === "./") continue;
     assert.ok((await lstat(resolve(root, "public/flutter-demo", path))).isFile(), path);
   }
 });

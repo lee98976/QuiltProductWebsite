@@ -8,7 +8,7 @@ const relativeRoot = relative(destination, root);
 if (!relativeRoot || (!relativeRoot.startsWith("..") && !isAbsolute(relativeRoot))) {
   throw new Error("Choose a new destination, not the website root or one of its ancestors.");
 }
-const folders = ["app", "build", "public", "scripts", "tests", "types", "worker"];
+const folders = [".github", "app", "build", "public", "scripts", "tests", "types", "worker"];
 for (const folder of folders) {
   const within = relative(resolve(root, folder), destination);
   if (!within || (!within.startsWith("..") && !isAbsolute(within))) {

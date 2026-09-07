@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { sitePath } from "./site-path";
 
 const navItems = [
   { label: "Products", href: "/#features" },
@@ -45,7 +46,7 @@ export function SiteHeader() {
       </Link>
       <nav aria-label="Primary navigation">
         {navItems.map((item) => (
-          <a href={item.href} key={item.label}>
+          <a href={sitePath(item.href === "/privacy" ? "/privacy/" : item.href)} key={item.label}>
             {item.label}
           </a>
         ))}

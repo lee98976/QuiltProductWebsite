@@ -1,6 +1,7 @@
 import { DemoFocus } from "./DemoFocus";
 import { HeroScreenScroller } from "./HeroScreenScroller";
 import { SiteHeader } from "./SiteHeader";
+import { sitePath } from "./site-path";
 
 const previewSamples = {
   schools: ["Troy High School", "Sunset Ridge High School", "Northview Preparatory"],
@@ -160,7 +161,7 @@ export default function Home() {
             so students, families, and staff see the information meant for them.
           </p>
         </div>
-        <a className="primary-action" href="/privacy">Open privacy page</a>
+        <a className="primary-action" href={sitePath("/privacy/")}>Open privacy page</a>
       </section>
 
       <footer>

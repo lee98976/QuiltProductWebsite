@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { sitePath } from "./site-path";
 
 export function DemoFocus({ children }: { children: ReactNode }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -63,7 +64,7 @@ export function DemoFocus({ children }: { children: ReactNode }) {
               </div>
               <iframe
                 title="Quilt app preview"
-                src="/flutter-demo/index.html"
+                src={sitePath("/flutter-demo/index.html")}
                 loading="lazy"
                 allow="camera; clipboard-read; clipboard-write"
               />
