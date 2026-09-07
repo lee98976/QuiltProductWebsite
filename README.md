@@ -43,21 +43,29 @@ clean export. The separate website repository has no dependency on the enclosing
 
 ## Preview ownership
 
-`public/flutter-demo/` is a **frozen, precompiled demo**, owned by this website.
-It is copied directly into builds. The website does not import Dart code, copy
-assets from the app, or invoke the app's demo-build script. Future app changes do
-not change this preview. To change its internal screens, supply a separately
-built replacement demo; editable Dart sources are not part of this website.
+`demo/` contains this website's own editable Flutter source, assets, and dependency
+lockfile. `public/flutter-demo/` contains its committed build. Normal website and
+GitHub Pages builds use those assets without needing Flutter or an app checkout.
 
-The bundled preview uses sample data and dummy `quilt-demo-public` Firebase
-settings, never production credentials. Its Flutter renderer is served locally.
-The inherited demo still loads Firebase library code and fallback fonts from
-Google, and some account/admin actions are only representative; it is not an
-offline application or a live account portal. Do not enter real personal data.
+The demo uses local club/event fixtures and empty local states for other reads.
+It has only dummy Firebase settings, no production configuration, and no connection
+to the actual app's data. Sample events stay upcoming relative to the current date.
+Reloading resets the session. Some account/admin actions remain illustrative.
 
-The surrounding phone frame owns the status-bar space; the iframe starts at zero
-inset. The larger preview keeps the same iframe mounted, supports Escape and
-keyboard focus containment, and fits its content viewport to the available height.
+To edit the internal demo, install Flutter 3.44.4, then run:
+
+```sh
+npm run test:demo
+npm run build:demo
+```
+
+Commit both `demo/` source and rebuilt `public/flutter-demo/` assets. The clean
+export includes demo source and excludes Flutter caches/build output.
+
+The frame owns the status-bar spacing. Expanded preview scales the complete phone
+proportionally to fit with a 12px viewport gutter, while the iframe stays mounted
+at a constant size. It animates from/to its inline position, respects reduced motion,
+and supports Escape and keyboard focus containment.
 
 ## Publish on GitHub Pages
 
@@ -77,8 +85,8 @@ A local commit alone does not run GitHub Actions; it must be pushed. You can als
 run the workflow manually from the Actions tab. No deployment token or Cloudflare
 account is needed. The workflow gets the actual URL and repository prefix from
 GitHub Pages, so project sites, user sites, and configured custom domains work.
-For the current `lee98976/QuiltPrivacy` repository, the default URL is
-`https://lee98976.github.io/QuiltPrivacy/`.
+For the current `lee98976/QuiltProductWebsite` repository, the default URL is
+`https://lee98976.github.io/QuiltProductWebsite/`.
 
 ### Test the static build locally
 
@@ -98,11 +106,11 @@ direct visits and refreshes work on Pages.
 To validate a repository prefix before deploying (macOS/Linux):
 
 ```sh
-PAGES_BASE_PATH=/QuiltPrivacy SITE_URL=https://lee98976.github.io/QuiltPrivacy npm run build:pages
-PAGES_BASE_PATH=/QuiltPrivacy npm run test:pages
+PAGES_BASE_PATH=/QuiltProductWebsite SITE_URL=https://lee98976.github.io/QuiltProductWebsite npm run build:pages
+PAGES_BASE_PATH=/QuiltProductWebsite npm run test:pages
 ```
 
-For that preview, mount the contents of `out/` at `/QuiltPrivacy/` in your static
+For that preview, mount the contents of `out/` at `/QuiltProductWebsite/` in your static
 server. `PAGES_BASE_PATH` is optional for root/custom-domain builds. `SITE_URL`
 is the full published site URL including any repository path, used in social
 preview metadata. The workflow sets both automatically.

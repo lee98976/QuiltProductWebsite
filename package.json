@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "export:standalone": "node scripts/export-standalone.mjs",
     "build:pages": "node scripts/build-pages.mjs",
-    "test:pages": "node --test tests/github-pages.test.mjs"
+    "test:pages": "node --test tests/github-pages.test.mjs",
+    "build:demo": "node scripts/build-demo.mjs",
+    "test:demo": "cd demo && flutter test"
   },
   "dependencies": {
     "react": "19.2.8",

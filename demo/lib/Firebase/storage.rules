@@ -1,0 +1,71 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isOperator() {
+      return signedIn()
+        && (
+          request.auth.token.god == true
+          || request.auth.token.superAdmin == true
+          || request.auth.token.operator == true
+        );
+    }
+
+    function isImage() {
+      return request.resource != null
+        && request.resource.contentType is string
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isPostAttachment() {
+      return request.resource != null
+        && request.resource.contentType is string
+        && (
+          request.resource.contentType.matches('image/.*')
+          || request.resource.contentType == 'application/pdf'
+          || request.resource.contentType.matches('text/.*')
+        );
+    }
+
+    function underSize(limitMb) {
+      return request.resource != null
+        && request.resource.size < limitMb * 1024 * 1024;
+    }
+
+    match /users/{uid}/profile/{filePath=**} {
+      allow get: if true;
+      allow list: if isOwner(uid) || isOperator();
+      allow create, update: if isOwner(uid)
+        && isImage()
+        && underSize(10);
+      allow delete: if isOwner(uid) || isOperator();
+    }
+
+    match /schools/{schoolId}/clubs/{clubId}/profile/{fileName} {
+      allow read: if true;
+      allow create, update: if signedIn()
+        && isImage()
+        && underSize(10);
+      allow delete: if isOperator();
+    }
+
+    match /schools/{schoolId}/clubs/{clubId}/posts/{authorId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isOwner(authorId)
+        && isPostAttachment()
+        && underSize(25);
+      allow delete: if isOwner(authorId) || isOperator();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

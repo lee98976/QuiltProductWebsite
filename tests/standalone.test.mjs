@@ -13,6 +13,9 @@ test("demo owns its assets and contains only dummy Firebase configuration", asyn
     read("public/flutter-demo/flutter_bootstrap.js"),
     read("public/flutter-demo/index.html"),
   ]);
+  for (const sample of ["Robotics drive practice", "Fall club fair", "Health Sciences HOSA"]) {
+    assert.ok(bundle.includes(sample), `Committed demo is missing sample data: ${sample}`);
+  }
   assert.doesNotMatch(bundle, /AIza[\w-]{30,}/);
   const projects = [...bundle.matchAll(/([\w-]+)\.(?:firebaseapp\.com|firebasestorage\.app)/g)];
   assert.ok(projects.length > 0);

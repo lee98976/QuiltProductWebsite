@@ -9,7 +9,7 @@ if (!relativeRoot || (!relativeRoot.startsWith("..") && !isAbsolute(relativeRoot
   throw new Error("Choose a new destination, not the website root or one of its ancestors.");
 }
 const folders = [".github", "app", "build", "public", "scripts", "tests", "types", "worker"];
-for (const folder of folders) {
+for (const folder of [...folders, "demo"]) {
   const within = relative(resolve(root, folder), destination);
   if (!within || (!within.startsWith("..") && !isAbsolute(within))) {
     throw new Error("The destination cannot be inside website source or assets.");
@@ -26,11 +26,12 @@ async function verifyTree(path) {
 
 // Only portable source and assets: no app checkout, Git history, secrets,
 // dependency folders, generated output, host registration, or machine caches.
+const demoFiles = ["demo/lib", "demo/assets", "demo/web", "demo/test", "demo/pubspec.yaml", "demo/pubspec.lock", "demo/README.md"];
 const files = [".gitignore", "README.md", "package.json", "package-lock.json", "tsconfig.json", "next-env.d.ts", "next.config.ts", "vite.config.ts", "postcss.config.mjs", "eslint.config.mjs"];
-for (const entry of [...folders, ...files]) await verifyTree(resolve(root, entry));
+for (const entry of [...folders, ...files, ...demoFiles]) await verifyTree(resolve(root, entry));
 await mkdir(dirname(destination), { recursive: true });
 await mkdir(destination); // Never overwrite an existing folder.
-for (const entry of [...folders, ...files]) {
+for (const entry of [...folders, ...files, ...demoFiles]) {
   await cp(resolve(root, entry), resolve(destination, entry), { recursive: true, errorOnExist: true, force: false });
 }
 console.log(`Standalone website exported to ${destination}`);

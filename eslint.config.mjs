@@ -19,6 +19,7 @@ const eslintConfig = defineConfig([
     ".vinext/**",
     ".wrangler/**",
     "public/flutter-demo/**",
+    "demo/**",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

@@ -1,0 +1,1196 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/Users/$(uid);
+    }
+
+    function currentUserExists() {
+      return signedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function currentUser() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    function isOperator() {
+      return signedIn()
+        && (
+          request.auth.token.god == true
+          || request.auth.token.superAdmin == true
+          || request.auth.token.operator == true
+        );
+    }
+
+    function isSchoolAdmin() {
+      return currentUserExists()
+        && currentUser().isAdmin == true
+        && currentUser().accountRole == 'School Administrator'
+        && currentUser().accountStatus == 'Verified'
+        && currentUser().schoolID is string
+        && currentUser().schoolID != '';
+    }
+
+    function adminOwnsSchool(schoolId) {
+      return isOperator()
+        || (
+          isSchoolAdmin()
+          && currentUser().schoolID == schoolId
+        );
+    }
+
+    function isParent() {
+      return currentUserExists() && currentUser().accountRole == 'Parent';
+    }
+
+    function isCurrentStudent() {
+      return currentUserExists() && currentUser().accountRole == 'Current Student';
+    }
+
+    function isVerifiedStudent() {
+      return isCurrentStudent() && currentUser().accountStatus == 'Verified';
+    }
+
+    function isInSchool(schoolId) {
+      return currentUserExists() && currentUser().schoolID == schoolId;
+    }
+
+    function isApprovedParentForSchool(schoolId) {
+      return isParent()
+        && 'childSchoolIDs' in currentUser().keys()
+        && schoolId in currentUser().childSchoolIDs;
+    }
+
+    function canViewSchool(schoolId) {
+      return adminOwnsSchool(schoolId)
+        || isInSchool(schoolId)
+        || isApprovedParentForSchool(schoolId);
+    }
+
+    function canParticipateInSchool(schoolId) {
+      return adminOwnsSchool(schoolId)
+        || (isVerifiedStudent() && isInSchool(schoolId));
+    }
+
+    function currentStudentHasParentLink() {
+      return isCurrentStudent()
+        && (
+          ('parentIds' in currentUser().keys() && currentUser().parentIds.size() > 0)
+          || ('parentUIDs' in currentUser().keys() && currentUser().parentUIDs.size() > 0)
+          || ('linkedAccounts' in currentUser().keys() && currentUser().linkedAccounts.size() > 0)
+        );
+    }
+
+    function linkedToResourceUser() {
+      return signedIn()
+        && (
+          ('parentIds' in resource.data.keys()
+            && request.auth.uid in resource.data.parentIds)
+          || ('parentUIDs' in resource.data.keys()
+            && request.auth.uid in resource.data.parentUIDs)
+          || ('studentUids' in resource.data.keys()
+            && request.auth.uid in resource.data.studentUids)
+          || ('parentStudentIds' in resource.data.keys()
+            && request.auth.uid in resource.data.parentStudentIds)
+          || ('childUIDs' in resource.data.keys()
+            && request.auth.uid in resource.data.childUIDs)
+        );
+    }
+
+    function canReadUser(uid) {
+      return isOperator()
+        || isSelf(uid)
+        || linkedToResourceUser()
+        || (
+          'schoolID' in resource.data.keys()
+          && resource.data.schoolID is string
+          && resource.data.schoolID != ''
+          && canViewSchool(resource.data.schoolID)
+        )
+        || (
+          'debugSchoolID' in resource.data.keys()
+          && resource.data.debugSchoolID is string
+          && adminOwnsSchool(resource.data.debugSchoolID)
+        );
+    }
+
+    function limitedFamilyCodeLookup() {
+      return signedIn()
+        && request.query.limit != null
+        && request.query.limit <= 1
+        && resource.data.accountRole == 'Current Student'
+        && resource.data.familyCode is string
+        && resource.data.familyCode != '';
+    }
+
+    function hasNoInitialLinks() {
+      return (!('parentStudentIds' in request.resource.data.keys())
+          || request.resource.data.parentStudentIds.size() == 0)
+        && (!('parentIds' in request.resource.data.keys())
+          || request.resource.data.parentIds.size() == 0)
+        && (!('studentUids' in request.resource.data.keys())
+          || request.resource.data.studentUids.size() == 0)
+        && (!('parentUIDs' in request.resource.data.keys())
+          || request.resource.data.parentUIDs.size() == 0)
+        && (!('childUIDs' in request.resource.data.keys())
+          || request.resource.data.childUIDs.size() == 0)
+        && (!('childSchoolIDs' in request.resource.data.keys())
+          || request.resource.data.childSchoolIDs.size() == 0)
+        && (!('linkedAccounts' in request.resource.data.keys())
+          || request.resource.data.linkedAccounts.size() == 0);
+    }
+
+    function validNewUserRoleStatus() {
+      return (
+          request.resource.data.accountRole == 'Current Student'
+          && request.resource.data.accountStatus == 'Non Verified'
+          && request.resource.data.schoolID is string
+          && request.resource.data.schoolID != ''
+        )
+        || (
+          request.resource.data.accountRole in ['Parent', 'Prospective Student']
+          && request.resource.data.accountStatus == 'View Only'
+          && request.resource.data.schoolID == ''
+        );
+    }
+
+    function validNewUser(uid) {
+      return isSelf(uid)
+        && request.resource.data.keys().hasOnly([
+          'email',
+          'displayName',
+          'realName',
+          'studentId',
+          'familyCode',
+          'accountStatus',
+          'accountRole',
+          'pfpURL',
+          'schoolID',
+          'school',
+          'UID',
+          'parentStudentIds',
+          'parentIds',
+          'studentUids',
+          'linkedAccounts',
+          'autoCalendarUpdatesEnabled',
+          'googleCalendarId',
+          'eventSignupNotificationsEnabled',
+          'clubVisibilityWarningDismissed',
+          'appThemeId',
+          'blockedUserIds',
+          'isAdmin',
+          'isDebug'
+        ])
+        && request.resource.data.keys().hasAll([
+          'email',
+          'displayName',
+          'realName',
+          'accountStatus',
+          'accountRole',
+          'schoolID',
+          'school',
+          'UID',
+          'isAdmin'
+        ])
+        && request.resource.data.UID == uid
+        && request.resource.data.school == request.resource.data.schoolID
+        && request.resource.data.isAdmin == false
+        && (!('isDebug' in request.resource.data.keys())
+          || request.resource.data.isDebug == false)
+        && validNewUserRoleStatus()
+        && hasNoInitialLinks();
+    }
+
+    function adminAssignmentPath(email) {
+      return /databases/$(database)/documents/AdminEmailAssignments/$(email);
+    }
+
+    function hasAssignedAdminSchool(schoolId) {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && exists(adminAssignmentPath(request.auth.token.email))
+        && schoolId in get(adminAssignmentPath(request.auth.token.email)).data.schoolIDs;
+    }
+
+    function validAssignedAdminProfile(uid) {
+      return isSelf(uid)
+        && request.resource.data.UID == uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.school == request.resource.data.schoolID
+        && request.resource.data.accountRole == 'School Administrator'
+        && request.resource.data.accountStatus == 'Verified'
+        && request.resource.data.isAdmin == true
+        && hasAssignedAdminSchool(request.resource.data.schoolID);
+    }
+
+    function validAssignedAdminCreate(uid) {
+      return validAssignedAdminProfile(uid)
+        && request.resource.data.keys().hasOnly([
+          'UID',
+          'email',
+          'displayName',
+          'realName',
+          'pfpURL',
+          'schoolID',
+          'school',
+          'accountRole',
+          'accountStatus',
+          'isAdmin',
+          'appThemeId',
+          'assignedAdminClaimedAt'
+        ])
+        && request.resource.data.assignedAdminClaimedAt == request.time;
+    }
+
+    function validAssignedAdminUpdate(uid) {
+      return validAssignedAdminProfile(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'UID',
+          'email',
+          'displayName',
+          'realName',
+          'pfpURL',
+          'schoolID',
+          'school',
+          'accountRole',
+          'accountStatus',
+          'isAdmin',
+          'appThemeId',
+          'assignedAdminClaimedAt'
+        ])
+        && request.resource.data.assignedAdminClaimedAt == request.time;
+    }
+
+    function selfProfileUpdate(uid) {
+      return isSelf(uid)
+        && request.resource.data.UID == resource.data.UID
+        && request.resource.data.accountRole == resource.data.accountRole
+        && request.resource.data.accountStatus == resource.data.accountStatus
+        && request.resource.data.schoolID == resource.data.schoolID
+        && request.resource.data.school == resource.data.school
+        && request.resource.data.isAdmin == resource.data.isAdmin
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName',
+          'realName',
+          'pfpURL',
+          'autoCalendarUpdatesEnabled',
+          'googleCalendarId',
+          'eventSignupNotificationsEnabled',
+          'clubVisibilityWarningDismissed',
+          'appThemeId',
+          'blockedUserIds'
+        ]);
+    }
+
+    function selfProspectiveProfileUpgrade(uid) {
+      return isSelf(uid)
+        && resource.data.accountRole == 'Prospective Student'
+        && resource.data.accountStatus == 'View Only'
+        && request.resource.data.UID == resource.data.UID
+        && request.resource.data.school == request.resource.data.schoolID
+        && request.resource.data.isAdmin == resource.data.isAdmin
+        && request.resource.data.isDebug == resource.data.isDebug
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'email',
+          'displayName',
+          'realName',
+          'studentId',
+          'familyCode',
+          'accountStatus',
+          'accountRole',
+          'pfpURL',
+          'schoolID',
+          'school',
+          'blockedUserIds'
+        ])
+        && (
+          (
+            request.resource.data.accountRole == 'Parent'
+            && request.resource.data.accountStatus == 'View Only'
+            && request.resource.data.schoolID == ''
+            && request.resource.data.studentId == ''
+            && request.resource.data.familyCode == ''
+          )
+          || (
+            request.resource.data.accountRole == 'Current Student'
+            && request.resource.data.accountStatus == 'Non Verified'
+            && request.resource.data.schoolID is string
+            && request.resource.data.schoolID != ''
+            && request.resource.data.familyCode is string
+            && request.resource.data.familyCode != ''
+          )
+        );
+    }
+
+    function selfFamilyCodeCreate(uid) {
+      return isSelf(uid)
+        && resource.data.accountRole == 'Current Student'
+        && (
+          !('familyCode' in resource.data.keys())
+          || resource.data.familyCode == ''
+        )
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['familyCode'])
+        && request.resource.data.familyCode is string
+        && request.resource.data.familyCode != '';
+    }
+
+    function studentCanUpdateOwnParentLinks(uid) {
+      return isSelf(uid)
+        && isCurrentStudent()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'parentIds',
+          'parentUIDs',
+          'linkedAccounts'
+        ]);
+    }
+
+    function studentCanAttachParentRecord() {
+      return isCurrentStudent()
+        && resource.data.accountRole == 'Parent'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'studentUids',
+          'parentStudentIds',
+          'childUIDs',
+          'childSchoolIDs',
+          'linkedAccounts'
+        ])
+        && request.auth.uid in request.resource.data.studentUids
+        && request.auth.uid in request.resource.data.parentStudentIds
+        && request.auth.uid in request.resource.data.childUIDs;
+    }
+
+    function adminCanCreateDebugUser() {
+      return isSchoolAdmin()
+        && request.resource.data.isDebug == true
+        && request.resource.data.isAdmin == false
+        && request.resource.data.UID is string
+        && request.resource.data.accountRole in [
+          'Teacher',
+          'Current Student',
+          'Prospective Student',
+          'Parent'
+        ]
+        && (
+          request.resource.data.schoolID == currentUser().schoolID
+          || request.resource.data.debugSchoolID == currentUser().schoolID
+        );
+    }
+
+    function adminCanUpdateSchoolUser() {
+      return isSchoolAdmin()
+        && (
+          (
+            resource.data.schoolID is string
+            && resource.data.schoolID == currentUser().schoolID
+          )
+          || (
+            resource.data.debugSchoolID is string
+            && resource.data.debugSchoolID == currentUser().schoolID
+            && resource.data.isDebug == true
+          )
+        )
+        && request.resource.data.isAdmin != true
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'UID',
+          'isAdmin',
+          'schoolID',
+          'school',
+          'isDebug',
+          'debugSchoolID',
+          'rewardPoints'
+        ]);
+    }
+
+    function adminCanDeleteSchoolUser() {
+      return isSchoolAdmin()
+        && resource.data.isAdmin != true
+        && (
+          (
+            resource.data.schoolID is string
+            && resource.data.schoolID == currentUser().schoolID
+          )
+          || (
+            resource.data.debugSchoolID is string
+            && resource.data.debugSchoolID == currentUser().schoolID
+            && resource.data.isDebug == true
+          )
+        );
+    }
+
+    function validParentRequestCreate(requestId) {
+      return isParent()
+        && request.resource.data.parentId == request.auth.uid
+        && request.resource.data.studentUid is string
+        && request.resource.data.studentUid != request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && (!('isDebug' in request.resource.data.keys())
+          || request.resource.data.isDebug == false)
+        && exists(userPath(request.resource.data.studentUid))
+        && get(userPath(request.resource.data.studentUid)).data.accountRole == 'Current Student'
+        && get(userPath(request.resource.data.studentUid)).data.familyCode == request.resource.data.studentFamilyCode;
+    }
+
+    function adminCanReadParentRequest() {
+      return isSchoolAdmin()
+        && exists(userPath(resource.data.studentUid))
+        && get(userPath(resource.data.studentUid)).data.schoolID == currentUser().schoolID;
+    }
+
+    function studentCanRespondToParentRequest() {
+      return isCurrentStudent()
+        && resource.data.studentUid == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'respondedAt',
+          'parentRelationship'
+        ])
+        && request.resource.data.status in ['accepted', 'declined']
+        && request.resource.data.respondedAt == request.time
+        && (
+          request.resource.data.status == 'declined'
+          || (
+            request.resource.data.parentRelationship is string
+            && request.resource.data.parentRelationship != ''
+          )
+        );
+    }
+
+    function parentCanDeleteOwnParentRequest() {
+      return isParent() && resource.data.parentId == request.auth.uid;
+    }
+
+    function parentUserLinksRequester(uid) {
+      return exists(userPath(uid))
+        && get(userPath(uid)).data.accountRole == 'Parent'
+        && (
+          ('studentUids' in get(userPath(uid)).data.keys()
+            && request.auth.uid in get(userPath(uid)).data.studentUids)
+          || ('parentStudentIds' in get(userPath(uid)).data.keys()
+            && request.auth.uid in get(userPath(uid)).data.parentStudentIds)
+          || ('childUIDs' in get(userPath(uid)).data.keys()
+            && request.auth.uid in get(userPath(uid)).data.childUIDs)
+        );
+    }
+
+    function validEventSignupNotificationCreate(uid) {
+      return isCurrentStudent()
+        && parentUserLinksRequester(uid)
+        && (!('eventSignupNotificationsEnabled' in get(userPath(uid)).data.keys())
+          || get(userPath(uid)).data.eventSignupNotificationsEnabled == true)
+        && request.resource.data.keys().hasOnly([
+          'recipientUid',
+          'title',
+          'body',
+          'type',
+          'schoolID',
+          'clubID',
+          'eventID',
+          'childUid',
+          'childName',
+          'createdAt',
+          'readAt'
+        ])
+        && request.resource.data.recipientUid == uid
+        && request.resource.data.childUid == request.auth.uid
+        && request.resource.data.type == 'eventSignup'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.readAt == null;
+    }
+
+    function validVisibility() {
+      return !('visibility' in request.resource.data.keys())
+        || request.resource.data.visibility in [
+          'public',
+          'schoolMembers',
+          'clubMembers'
+        ];
+    }
+
+    function publiclyVisible() {
+      return resource.data.visibility == 'public';
+    }
+
+    function schoolVisible() {
+      return !('visibility' in resource.data.keys())
+        || resource.data.visibility == 'schoolMembers';
+    }
+
+    function clubMemberPath(schoolId, clubId, uid) {
+      return /databases/$(database)/documents/Schools/$(schoolId)/Clubs/$(clubId)/Members/$(uid);
+    }
+
+    function clubJoinRequestPath(schoolId, clubId, uid) {
+      return /databases/$(database)/documents/Schools/$(schoolId)/Clubs/$(clubId)/JoinRequests/$(uid);
+    }
+
+    function isClubMember(schoolId, clubId) {
+      return signedIn()
+        && exists(clubMemberPath(schoolId, clubId, request.auth.uid));
+    }
+
+    function publicClubRole(role) {
+      return role in [
+        'Supervisor',
+        'President',
+        'Officer',
+        'Content Manager',
+        'Event Coordinator',
+        'Leader'
+      ];
+    }
+
+    function roleHasPermission(role, permission) {
+      return (
+          role in ['Supervisor', 'Leader']
+          && permission in [
+            'publishPosts',
+            'createPolls',
+            'createEvents',
+            'manageSettings',
+            'moderateContent',
+            'changeVisibility'
+          ]
+        )
+        || (
+          role == 'President'
+          && permission in [
+            'publishPosts',
+            'createPolls',
+            'createEvents',
+            'manageMembers',
+            'manageSettings',
+            'moderateContent',
+            'changeVisibility'
+          ]
+        )
+        || (
+          role == 'Officer'
+          && permission in [
+            'publishPosts',
+            'createPolls',
+            'createEvents',
+            'changeVisibility'
+          ]
+        )
+        || (
+          role == 'Content Manager'
+          && permission in [
+            'publishPosts',
+            'createPolls',
+            'moderateContent',
+            'changeVisibility'
+          ]
+        )
+        || (
+          role == 'Event Coordinator'
+          && permission in ['createEvents', 'changeVisibility']
+        );
+    }
+
+    function clubMemberHasPermission(schoolId, clubId, permission) {
+      return adminOwnsSchool(schoolId)
+        || (
+          canParticipateInSchool(schoolId)
+          && isClubMember(schoolId, clubId)
+          && (
+            roleHasPermission(
+              get(clubMemberPath(schoolId, clubId, request.auth.uid)).data.role,
+              permission
+            )
+            || (
+              'permissions' in get(clubMemberPath(schoolId, clubId, request.auth.uid)).data.keys()
+              && permission in get(clubMemberPath(schoolId, clubId, request.auth.uid)).data.permissions
+            )
+          )
+        );
+    }
+
+    function clubMemberIsPresident(schoolId, clubId) {
+      return canParticipateInSchool(schoolId)
+        && isClubMember(schoolId, clubId)
+        && get(clubMemberPath(schoolId, clubId, request.auth.uid)).data.role == 'President';
+    }
+
+    function clubMemberCanApproveJoinRequests(schoolId, clubId) {
+      return adminOwnsSchool(schoolId)
+        || clubMemberHasPermission(schoolId, clubId, 'manageMembers')
+        || (
+          canParticipateInSchool(schoolId)
+          && isClubMember(schoolId, clubId)
+          && get(clubMemberPath(schoolId, clubId, request.auth.uid)).data.role in [
+            'Supervisor',
+            'Leader'
+          ]
+        );
+    }
+
+    function requestedVisibilityAllowed(schoolId, clubId) {
+      return validVisibility()
+        && (
+          !('visibility' in request.resource.data.keys())
+          || request.resource.data.visibility == 'clubMembers'
+          || clubMemberHasPermission(schoolId, clubId, 'changeVisibility')
+        );
+    }
+
+    function canReadClubContent(schoolId, clubId) {
+      return publiclyVisible()
+        || (schoolVisible() && canViewSchool(schoolId))
+        || (
+          resource.data.visibility == 'clubMembers'
+          && (
+            isClubMember(schoolId, clubId)
+            || isApprovedParentForSchool(schoolId)
+            || adminOwnsSchool(schoolId)
+          )
+        );
+    }
+
+    function approvedEvent() {
+      return resource.data.status == 'approved';
+    }
+
+    function userCanChangeOnlyOwnVote() {
+      return request.resource.data.votes is map
+        && resource.data.votes is map
+        && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([
+          request.auth.uid
+        ]);
+    }
+
+    function existingPostAcknowledgements() {
+      return (
+        'acknowledgements' in resource.data.keys()
+        && resource.data.acknowledgements is list
+      ) ? resource.data.acknowledgements : [];
+    }
+
+    function validPostAcknowledgementUpdate(schoolId, clubId) {
+      let oldAcknowledgements = existingPostAcknowledgements();
+      let newAcknowledgements = request.resource.data.acknowledgements;
+      let newAcknowledgement = newAcknowledgements[oldAcknowledgements.size()];
+      return signedIn()
+        && isClubMember(schoolId, clubId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'acknowledgements'
+        ])
+        && newAcknowledgements is list
+        && newAcknowledgements.size() == oldAcknowledgements.size() + 1
+        && newAcknowledgements.size() <= 500
+        && newAcknowledgements.hasAll(oldAcknowledgements)
+        && newAcknowledgement is map
+        && newAcknowledgement.keys().hasOnly([
+          'uid',
+          'displayName',
+          'photoUrl',
+          'acknowledgedAt'
+        ])
+        && newAcknowledgement.uid == request.auth.uid
+        && newAcknowledgement.displayName is string
+        && newAcknowledgement.acknowledgedAt is timestamp
+        && (
+          !('photoUrl' in newAcknowledgement.keys())
+          || newAcknowledgement.photoUrl is string
+          || newAcknowledgement.photoUrl == null
+        );
+    }
+
+    function validJoinRequestCreate(requestId, schoolId, clubId) {
+      return isSelf(requestId)
+        && canParticipateInSchool(schoolId)
+        && !exists(clubMemberPath(schoolId, clubId, request.auth.uid))
+        && request.resource.data.keys().hasOnly([
+          'userId',
+          'name',
+          'email',
+          'studentId',
+          'photoUrl',
+          'status',
+          'createdAt'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name != ''
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function validJoinRequestResubmit(requestId, schoolId, clubId) {
+      return resource.data.status == 'rejected'
+        && validJoinRequestCreate(requestId, schoolId, clubId);
+    }
+
+    function validJoinRequestResolution(schoolId, clubId) {
+      return clubMemberCanApproveJoinRequests(schoolId, clubId)
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status',
+          'resolvedAt',
+          'resolvedBy'
+        ])
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.resolvedAt == request.time
+        && request.resource.data.resolvedBy == request.auth.uid;
+    }
+
+    function validApprovedMemberCreate(memberId, schoolId, clubId) {
+      return clubMemberCanApproveJoinRequests(schoolId, clubId)
+        && exists(clubJoinRequestPath(schoolId, clubId, memberId))
+        && get(clubJoinRequestPath(schoolId, clubId, memberId)).data.status == 'pending'
+        && get(clubJoinRequestPath(schoolId, clubId, memberId)).data.userId == memberId
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'role',
+          'subtitle',
+          'email',
+          'phoneNumber',
+          'photoUrl',
+          'isImportant',
+          'permissions'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name != ''
+        && request.resource.data.role == 'Member'
+        && request.resource.data.isImportant == false;
+    }
+
+    function clubLeaderCanUpdateClub(schoolId, clubId) {
+      return clubMemberHasPermission(schoolId, clubId, 'manageSettings')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title',
+          'tagline',
+          'description',
+          'meetingTime',
+          'location',
+          'imageUrl',
+          'groupChatUrl',
+          'highlights',
+          'quickLinks'
+        ])
+        && (!('quickLinks' in request.resource.data.keys())
+          || (
+            request.resource.data.quickLinks is list
+            && request.resource.data.quickLinks.size() <= 20
+          ));
+    }
+
+    function validManagedClubRoleUpdate(schoolId, clubId) {
+      return clubMemberIsPresident(schoolId, clubId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'role',
+          'permissions',
+          'isImportant'
+        ])
+        && request.resource.data.role in [
+          'Supervisor',
+          'President',
+          'Officer',
+          'Content Manager',
+          'Event Coordinator',
+          'Member'
+        ];
+    }
+
+    function parentCanVolunteerForEvent(uid, schoolId) {
+      return isSelf(uid)
+        && isParent()
+        && isApprovedParentForSchool(schoolId)
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'name',
+          'email',
+          'photoUrl',
+          'status',
+          'timestamp'
+        ])
+        && request.resource.data.uid == uid
+        && request.resource.data.name is string
+        && request.resource.data.name != ''
+        && request.resource.data.status == 'chaperone'
+        && request.resource.data.timestamp == request.time;
+    }
+
+    match /RateLimits/{uid} {
+      allow read: if false;
+      allow create: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['lastPostTime'])
+        && request.resource.data.lastPostTime == request.time;
+      allow update: if isSelf(uid)
+        && request.resource.data.keys().hasOnly(['lastPostTime'])
+        && request.resource.data.lastPostTime == request.time
+        && request.time.toMillis() > resource.data.lastPostTime.toMillis() + 60000;
+      allow delete: if isSelf(uid) || isOperator();
+    }
+
+    match /Users/{uid} {
+      allow get: if canReadUser(uid);
+      allow list: if canReadUser(uid) || limitedFamilyCodeLookup();
+
+      allow create: if validNewUser(uid)
+        || validAssignedAdminCreate(uid)
+        || isOperator()
+        || adminCanCreateDebugUser();
+
+      allow update: if selfProfileUpdate(uid)
+        || selfProspectiveProfileUpgrade(uid)
+        || selfFamilyCodeCreate(uid)
+        || studentCanUpdateOwnParentLinks(uid)
+        || studentCanAttachParentRecord()
+        || adminCanUpdateSchoolUser()
+        || validAssignedAdminUpdate(uid)
+        || isOperator();
+
+      allow delete: if isSelf(uid)
+        || adminCanDeleteSchoolUser()
+        || isOperator();
+
+      match /Notifications/{notificationId} {
+        allow get, list: if isSelf(uid);
+        allow create: if validEventSignupNotificationCreate(uid)
+          || isOperator();
+        allow update: if isSelf(uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readAt'])
+          && request.resource.data.readAt == request.time;
+        allow delete: if isSelf(uid) || isOperator();
+      }
+    }
+
+    match /AdminEmailAssignments/{email} {
+      allow get: if isOperator()
+        || (
+          signedIn()
+          && request.auth.token.email is string
+          && request.auth.token.email == email
+        )
+        || (
+          isSchoolAdmin()
+          && currentUser().schoolID in resource.data.schoolIDs
+        );
+      allow list: if isOperator()
+        || (
+          isSchoolAdmin()
+          && currentUser().schoolID in resource.data.schoolIDs
+        );
+      allow create, update, delete: if isOperator();
+    }
+
+    match /ParentRequests/{requestId} {
+      allow read: if isOperator()
+        || adminCanReadParentRequest()
+        || (signedIn() && resource.data.parentId == request.auth.uid)
+        || (signedIn() && resource.data.studentUid == request.auth.uid);
+
+      allow create: if validParentRequestCreate(requestId) || isOperator();
+      allow update: if studentCanRespondToParentRequest() || isOperator();
+      allow delete: if adminCanReadParentRequest()
+        || parentCanDeleteOwnParentRequest()
+        || (signedIn() && resource.data.studentUid == request.auth.uid)
+        || isOperator();
+    }
+
+    match /{path=**}/Posts/{postId} {
+      allow get, list: if signedIn()
+        && resource.data.authorId == request.auth.uid;
+    }
+
+    match /{path=**}/Polls/{pollId} {
+      allow get, list: if signedIn()
+        && resource.data.creatorId == request.auth.uid;
+    }
+
+    match /{path=**}/Events/{eventId} {
+      allow get, list: if isOperator()
+        || (
+          'schoolID' in resource.data.keys()
+          && resource.data.schoolID is string
+          && adminOwnsSchool(resource.data.schoolID)
+        )
+        || (signedIn() && resource.data.creatorId == request.auth.uid)
+        || (
+          approvedEvent()
+          && 'schoolID' in resource.data.keys()
+          && resource.data.schoolID is string
+          && 'clubID' in resource.data.keys()
+          && resource.data.clubID is string
+          && canReadClubContent(resource.data.schoolID, resource.data.clubID)
+        );
+    }
+
+    match /Schools/{schoolId} {
+      allow read: if true;
+      allow create, update, delete: if adminOwnsSchool(schoolId);
+
+      match /BellSchedules/{scheduleId} {
+        allow read: if signedIn();
+        allow write: if adminOwnsSchool(schoolId);
+      }
+
+      match /ScheduleDays/{scheduleDayPath=**} {
+        allow read: if signedIn();
+        allow write: if adminOwnsSchool(schoolId);
+      }
+
+      match /BellScheduleDays/{scheduleDayPath=**} {
+        allow read: if signedIn();
+        allow write: if adminOwnsSchool(schoolId);
+      }
+
+      match /DayTypes/{dayTypePath=**} {
+        allow read: if signedIn();
+        allow write: if adminOwnsSchool(schoolId);
+      }
+
+      match /Calendar/{calendarDayPath=**} {
+        allow read: if signedIn();
+        allow write: if adminOwnsSchool(schoolId);
+      }
+
+      match /Clubs/{clubId} {
+        allow read: if true;
+        allow create, delete: if adminOwnsSchool(schoolId);
+        allow update: if adminOwnsSchool(schoolId)
+          || clubLeaderCanUpdateClub(schoolId, clubId);
+
+        match /Members/{memberId} {
+          allow get, list: if canViewSchool(schoolId)
+            || publicClubRole(resource.data.role);
+          allow create: if adminOwnsSchool(schoolId)
+            || validApprovedMemberCreate(memberId, schoolId, clubId);
+          allow update: if adminOwnsSchool(schoolId)
+            || validManagedClubRoleUpdate(schoolId, clubId);
+          allow delete: if adminOwnsSchool(schoolId)
+            || clubMemberHasPermission(schoolId, clubId, 'manageMembers');
+        }
+
+        match /JoinRequests/{requestId} {
+          allow get: if isSelf(requestId)
+            || clubMemberCanApproveJoinRequests(schoolId, clubId);
+          allow list: if clubMemberCanApproveJoinRequests(schoolId, clubId);
+          allow create: if validJoinRequestCreate(requestId, schoolId, clubId);
+          allow update: if validJoinRequestResolution(schoolId, clubId)
+            || validJoinRequestResubmit(requestId, schoolId, clubId);
+          allow delete: if adminOwnsSchool(schoolId);
+        }
+
+        match /Posts/{postId} {
+          allow get, list: if canReadClubContent(schoolId, clubId);
+
+          allow create: if adminOwnsSchool(schoolId)
+            || (
+              clubMemberHasPermission(schoolId, clubId, 'publishPosts')
+              && request.resource.data.authorId == request.auth.uid
+              && request.resource.data.schoolID == schoolId
+              && request.resource.data.clubID == clubId
+              && request.resource.data.createdAt == request.time
+              && requestedVisibilityAllowed(schoolId, clubId)
+              && getAfter(/databases/$(database)/documents/RateLimits/$(request.auth.uid)).data.lastPostTime == request.time
+            );
+
+          allow update: if adminOwnsSchool(schoolId)
+            || validPostAcknowledgementUpdate(schoolId, clubId);
+          allow delete: if adminOwnsSchool(schoolId)
+            || (signedIn() && resource.data.authorId == request.auth.uid)
+            || clubMemberHasPermission(schoolId, clubId, 'moderateContent');
+        }
+
+        match /Polls/{pollId} {
+          allow get, list: if canReadClubContent(schoolId, clubId);
+
+          allow create: if clubMemberHasPermission(schoolId, clubId, 'createPolls')
+            && request.resource.data.creatorId == request.auth.uid
+            && request.resource.data.createdAt == request.time
+            && requestedVisibilityAllowed(schoolId, clubId);
+
+          allow update: if canParticipateInSchool(schoolId)
+            && canReadClubContent(schoolId, clubId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+            && request.resource.data.votes[request.auth.uid] != null
+            && userCanChangeOnlyOwnVote();
+
+          allow delete: if adminOwnsSchool(schoolId)
+            || (signedIn() && resource.data.creatorId == request.auth.uid)
+            || clubMemberHasPermission(schoolId, clubId, 'moderateContent');
+        }
+
+        match /Events/{eventId} {
+          allow get, list: if adminOwnsSchool(schoolId)
+            || (approvedEvent() && canReadClubContent(schoolId, clubId))
+            || (signedIn() && resource.data.creatorId == request.auth.uid);
+
+          allow create: if adminOwnsSchool(schoolId)
+            || (
+              clubMemberHasPermission(schoolId, clubId, 'createEvents')
+              && request.resource.data.schoolID == schoolId
+              && request.resource.data.clubID == clubId
+              && request.resource.data.creatorId == request.auth.uid
+              && request.resource.data.status == 'pending'
+              && request.resource.data.createdAt == request.time
+              && requestedVisibilityAllowed(schoolId, clubId)
+            );
+
+          allow update: if adminOwnsSchool(schoolId);
+          allow delete: if adminOwnsSchool(schoolId)
+            || (signedIn() && resource.data.creatorId == request.auth.uid);
+
+          match /Attendees/{uid} {
+            allow read: if canViewSchool(schoolId);
+            allow create: if adminOwnsSchool(schoolId)
+              || (
+                isSelf(uid)
+                && canParticipateInSchool(schoolId)
+                && currentStudentHasParentLink()
+                && request.resource.data.keys().hasOnly([
+                  'uid',
+                  'name',
+                  'email',
+                  'photoUrl',
+                  'status',
+                  'timestamp'
+                ])
+                && request.resource.data.uid == uid
+                && request.resource.data.name is string
+                && request.resource.data.name != ''
+                && request.resource.data.status == 'going'
+                && request.resource.data.timestamp == request.time
+              );
+            allow update: if false;
+            allow delete: if adminOwnsSchool(schoolId)
+              || (
+                signedIn()
+                && get(/databases/$(database)/documents/Schools/$(schoolId)/Clubs/$(clubId)/Events/$(eventId)).data.creatorId == request.auth.uid
+              );
+          }
+
+          match /Volunteers/{uid} {
+            allow read: if canViewSchool(schoolId);
+            allow create, update: if parentCanVolunteerForEvent(uid, schoolId);
+            allow delete: if adminOwnsSchool(schoolId)
+              || (isSelf(uid) && isParent())
+              || (
+                signedIn()
+                && get(/databases/$(database)/documents/Schools/$(schoolId)/Clubs/$(clubId)/Events/$(eventId)).data.creatorId == request.auth.uid
+              );
+          }
+        }
+
+        match /Attendance/{uid} {
+          allow read: if canViewSchool(schoolId);
+          allow create: if isSelf(uid)
+            && canParticipateInSchool(schoolId)
+            && request.resource.data.keys().hasOnly(['firstAttended', 'lastAttended'])
+            && request.resource.data.firstAttended == request.time
+            && request.resource.data.lastAttended == request.time;
+          allow update: if isSelf(uid)
+            && canParticipateInSchool(schoolId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastAttended'])
+            && request.resource.data.lastAttended == request.time;
+          allow delete: if adminOwnsSchool(schoolId);
+        }
+      }
+
+      match /Polls/{pollId} {
+        allow read: if canViewSchool(schoolId);
+
+        allow create: if canParticipateInSchool(schoolId)
+          && request.resource.data.creatorId == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && validVisibility();
+
+        allow update: if canParticipateInSchool(schoolId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+          && request.resource.data.votes[request.auth.uid] != null
+          && userCanChangeOnlyOwnVote();
+        allow delete: if adminOwnsSchool(schoolId)
+          || (signedIn() && resource.data.creatorId == request.auth.uid);
+      }
+
+      match /HallPasses/{passId} {
+        allow read: if adminOwnsSchool(schoolId)
+          || (signedIn() && resource.data.studentId == request.auth.uid);
+
+        allow create: if signedIn()
+          && request.resource.data.studentId == request.auth.uid
+          && canParticipateInSchool(schoolId)
+          && request.resource.data.keys().hasOnly([
+            'studentId',
+            'roomId',
+            'departTime',
+            'returnTime',
+            'isActive'
+          ])
+          && request.resource.data.roomId is string
+          && request.resource.data.roomId != ''
+          && request.resource.data.departTime == request.time
+          && request.resource.data.returnTime == null
+          && request.resource.data.isActive == true;
+
+        allow update: if signedIn()
+          && resource.data.studentId == request.auth.uid
+          && request.resource.data.studentId == resource.data.studentId
+          && canParticipateInSchool(schoolId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'isActive',
+            'returnTime'
+          ])
+          && request.resource.data.isActive == false
+          && request.resource.data.returnTime == request.time;
+
+        allow delete: if adminOwnsSchool(schoolId);
+      }
+
+      match /ClubRequests/{requestId} {
+        allow read: if adminOwnsSchool(schoolId)
+          || (signedIn() && resource.data.applicantId == request.auth.uid);
+
+        allow create: if canParticipateInSchool(schoolId)
+          && request.resource.data.keys().hasOnly([
+            'applicantId',
+            'applicantName',
+            'title',
+            'description',
+            'meetingTime',
+            'location',
+            'status',
+            'createdAt'
+          ])
+          && request.resource.data.applicantId == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time;
+
+        allow update, delete: if adminOwnsSchool(schoolId);
+      }
+
+      match /ConnectionRequests/{requestId} {
+        allow read, create, update, delete: if adminOwnsSchool(schoolId);
+      }
+
+      match /ModerationReports/{reportId} {
+        allow read: if adminOwnsSchool(schoolId);
+
+        allow create: if signedIn()
+          && canViewSchool(schoolId)
+          && request.resource.data.schoolID == schoolId
+          && request.resource.data.reporterId == request.auth.uid
+          && request.resource.data.status == 'open'
+          && request.resource.data.createdAt == request.time;
+
+        allow update, delete: if adminOwnsSchool(schoolId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
