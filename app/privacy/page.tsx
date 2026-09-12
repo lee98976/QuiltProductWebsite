@@ -1,5 +1,4 @@
 import { SiteHeader } from "../SiteHeader";
-import { sitePath } from "../site-path";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -111,7 +110,7 @@ export default function PrivacyPage() {
             .
           </p>
         </div>
-        <Link className="secondary-action" href={sitePath("/")}>Back to Quilt</Link>
+        <Link className="secondary-action" href="/">Back to Quilt</Link>
       </section>
     </main>
   );
