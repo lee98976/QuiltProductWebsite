@@ -6,6 +6,7 @@ import test from "node:test";
 
 const output = fileURLToPath(new URL("../out/", import.meta.url));
 const basePath = (process.env.PAGES_BASE_PATH ?? "").replace(/\/$/, "");
+const externalOrBrowserScheme = /^(?:[a-z][a-z\d+.-]*:|#)/i;
 
 test("Pages export contains both routes, a 404 and the complete demo", async () => {
   for (const file of ["index.html", "index.txt", "privacy/index.html", "privacy/index.txt", "404.html", ".nojekyll", "flutter-demo/index.html", "flutter-demo/main.dart.js", "flutter-demo/canvaskit/canvaskit.js", "flutter-demo/canvaskit/canvaskit.wasm"]) {
@@ -20,7 +21,7 @@ test("all exported page links and assets resolve inside the Pages artifact", asy
     const html = await readFile(resolve(output, route), "utf8");
     for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
       const value = match[1];
-      if (value.startsWith("#") || /^https?:/.test(value)) continue;
+      if (externalOrBrowserScheme.test(value)) continue;
       assert.ok(value.startsWith(`${basePath}/`), `${route} escapes the repository path: ${value}`);
       const pathname = new URL(value, "https://pages.example").pathname.slice(basePath.length);
       const file = resolve(output, `.${pathname}${pathname.endsWith("/") ? "index.html" : ""}`);
