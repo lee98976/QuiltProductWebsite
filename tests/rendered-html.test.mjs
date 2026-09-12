@@ -32,13 +32,15 @@ test("server-renders the Quilt homepage", async () => {
   assert.match(html, /Take school community to the next level/);
   assert.match(html, /See how Quilt fits into the school day/);
   assert.match(html, /src="\/flutter-demo\/index\.html"/);
-  assert.match(html, /Sign In/);
+  assert.doesNotMatch(html, /Sign In/);
   assert.match(html, /\/privacy/);
   assert.match(html, /Coming soon on/);
   assert.match(html, /App Store/);
   assert.match(html, /Google Play/);
   assert.match(html, /Sample Quilt app screens/);
-  assert.match(html, /Screenshot placeholder/);
+  assert.match(html, /\/screenshots\/quilt-home\.jpeg/);
+  assert.match(html, /\/screenshots\/quilt-club-discovery\.jpeg/);
+  assert.doesNotMatch(html, /Screenshot placeholder/);
   assert.doesNotMatch(html, /\/admin\//);
   assert.doesNotMatch(html, /promo-bar|Try the Flutter demo/);
   assert.doesNotMatch(html, /embedded|production school data|demo Firebase|Flutter UI|hand-built HTML phone mock/i);

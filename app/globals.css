@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #18222f;
-  --muted: #5d6877;
-  --paper: #f8f5ef;
+  --ink: #111827;
+  --muted: #7b7d86;
+  --paper: #f8fafc;
   --surface: #ffffff;
-  --line: #ded8cd;
-  --sage: #4f7f68;
-  --mint: #d6eadb;
+  --line: #e5e7eb;
+  --sage: #2563eb;
+  --mint: #eef4ff;
   --coral: #d9654f;
-  --gold: #e1b84f;
-  --blue: #4f78a8;
-  --plum: #6f5a87;
-  --shadow: 0 20px 60px rgba(28, 34, 43, 0.12);
+  --gold: #f2c94c;
+  --blue: #75a5ff;
+  --plum: #6d5dfc;
+  --shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
   --marketing-header-offset: 86px;
 }
 
@@ -25,7 +25,7 @@ html {
 }
 
 :focus-visible {
-  outline: 3px solid #2563eb;
+  outline: 3px solid var(--blue);
   outline-offset: 4px;
 }
 
@@ -33,10 +33,10 @@ html {
   display: block;
   margin: 14px auto 0;
   padding: 8px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--line);
   border-radius: 999px;
   background: white;
-  color: #18222f;
+  color: var(--ink);
   font: inherit;
   font-size: 0.875rem;
   cursor: pointer;
@@ -48,7 +48,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: white;
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -335,10 +335,8 @@ h1 {
 
 .section,
 .role-section,
-.privacy-callout,
-.privacy-hero,
-.privacy-content {
-  padding: clamp(58px, 8vw, 104px) clamp(20px, 5vw, 72px);
+.privacy-callout {
+  padding: clamp(58px, 8vw, 104px) clamp(20px, 8vw, 184px);
 }
 
 .section-heading {
@@ -402,12 +400,12 @@ h3 {
 }
 
 .role-section {
-  background: #1f2a38;
+  background: var(--ink);
   color: white;
 }
 
 .role-section .eyebrow {
-  color: #9ed6b6;
+  color: #9bbcff;
 }
 
 .role-section h2 {
@@ -426,7 +424,7 @@ h3 {
 .role-columns div {
   min-height: 230px;
   padding: 24px;
-  background: #1f2a38;
+  background: var(--ink);
 }
 
 .role-columns p {
@@ -434,7 +432,7 @@ h3 {
 }
 
 .app-map {
-  background: #f4efe6;
+  background: #f4f4f5;
 }
 
 .map-table {
@@ -460,6 +458,7 @@ h3 {
   justify-content: space-between;
   gap: 28px;
   background: var(--mint);
+  border-top: 1px solid rgba(37, 99, 235, 0.12);
 }
 
 .privacy-callout > div {
@@ -752,53 +751,26 @@ footer span:first-child {
   transition-duration: 80ms;
 }
 
-.screen-placeholder {
-  display: grid;
+.screen-shot-frame {
+  display: block;
   width: 100%;
   aspect-ratio: 9 / 19.5;
-  place-items: center;
-  align-content: center;
-  gap: 12px;
-  padding: 38px 16px 28px;
   overflow: hidden;
-  color: #111827;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.64)),
-    hsl(var(--screen-tint));
+  background: #eef2ff;
   border: 1px solid rgba(17, 24, 39, 0.12);
   border-radius: 28px;
   box-shadow: 0 20px 48px rgba(15, 23, 42, 0.14);
-  text-align: center;
   transition:
     box-shadow 780ms ease,
     transform 780ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.screen-placeholder::before,
-.screen-placeholder::after {
+.screen-shot-frame img {
   display: block;
-  width: 78%;
-  height: 10px;
-  background: rgba(17, 24, 39, 0.12);
-  border-radius: 999px;
-  content: "";
-}
-
-.screen-placeholder::after {
-  width: 56%;
-}
-
-.screen-placeholder span {
-  font-size: clamp(1.35rem, 2vw, 2rem);
-  font-weight: 950;
-}
-
-.screen-placeholder i {
-  color: rgba(17, 24, 39, 0.56);
-  font-size: 0.76rem;
-  font-style: normal;
-  font-weight: 850;
-  text-transform: uppercase;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
 }
 
 .screen-card figcaption {
@@ -807,7 +779,7 @@ footer span:first-child {
   font-weight: 950;
 }
 
-.screen-card[data-offset="0"] .screen-placeholder {
+.screen-card[data-offset="0"] .screen-shot-frame {
   border-radius: 32px;
   box-shadow: 0 30px 76px rgba(15, 23, 42, 0.2);
   animation: screen-hero-pop 780ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -860,12 +832,12 @@ footer span:first-child {
 
 @media (prefers-reduced-motion: reduce) {
   .screen-card,
-  .screen-placeholder,
+  .screen-shot-frame,
   .screen-dots button {
     transition-duration: 1ms;
   }
 
-  .screen-card[data-offset="0"] .screen-placeholder {
+  .screen-card[data-offset="0"] .screen-shot-frame {
     animation: none;
   }
 }
@@ -921,8 +893,9 @@ footer span:first-child {
 }
 
 .flutter-demo-shell {
+  --demo-phone-inline-width: min(100%, 360px, calc((100dvh - 96px) * 390 / 844));
   display: grid;
-  grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, var(--demo-phone-inline-width)) minmax(0, 1fr);
   gap: clamp(28px, 6vw, 72px);
   align-items: center;
   margin-top: 34px;
@@ -930,7 +903,7 @@ footer span:first-child {
 
 .phone-demo-slot {
   position: relative;
-  width: min(100%, 390px);
+  width: var(--demo-phone-inline-width);
 }
 
 .flutter-phone-frame {
@@ -1185,34 +1158,126 @@ footer span:first-child {
 }
 
 .privacy-hero {
-  background: linear-gradient(130deg, var(--mint), #f8f5ef 62%, rgba(217, 101, 79, 0.24));
+  display: grid;
+  grid-template-columns: minmax(0, 0.98fr) minmax(280px, 0.42fr);
+  gap: clamp(28px, 6vw, 86px);
+  align-items: end;
+  padding: clamp(28px, 5vw, 74px) clamp(20px, 8vw, 184px) clamp(68px, 8vw, 112px);
+  background:
+    linear-gradient(180deg, rgba(238, 244, 255, 0.58), rgba(255, 255, 255, 0) 48%),
+    white;
+  border-bottom: 1px solid var(--line);
+}
+
+.privacy-hero-copy {
+  max-width: 880px;
 }
 
 .privacy-hero h1 {
   max-width: 760px;
+  color: #050510;
+  font-size: clamp(3.2rem, 6vw, 6.4rem);
+  line-height: 1.16;
+  font-weight: 950;
+}
+
+.privacy-hero h1::after {
+  display: block;
+  width: min(52%, 330px);
+  height: 10px;
+  margin: -2px 0 0 14%;
+  background: var(--blue);
+  border-radius: 999px;
+  content: "";
+  transform: rotate(-2deg);
 }
 
 .privacy-hero p:not(.eyebrow) {
-  max-width: 780px;
-  font-size: 1.12rem;
+  max-width: 760px;
+  margin: 28px 0 0;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.privacy-policy-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 26px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.08);
+}
+
+.privacy-policy-card span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.privacy-policy-card strong {
+  color: var(--ink);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.05;
+}
+
+.privacy-policy-card ul {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.privacy-policy-card li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #334155;
+  font-weight: 850;
+}
+
+.privacy-policy-card li::before {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  background: var(--blue);
+  border-radius: 999px;
+  content: "";
 }
 
 .privacy-content {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  gap: 18px;
+  padding: clamp(58px, 8vw, 104px) clamp(20px, 8vw, 184px);
+  background: #f4f4f5;
+}
+
+.privacy-section-heading {
+  grid-column: 1 / -1;
+  max-width: 820px;
+  margin-bottom: 14px;
+}
+
+.privacy-section-heading p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 1.08rem;
+  line-height: 1.65;
 }
 
 .privacy-content article {
-  padding: 28px;
+  padding: 30px;
   background: var(--surface);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  border-radius: 18px;
 }
 
-.privacy-content h2 {
-  font-size: clamp(1.4rem, 2vw, 2rem);
+.privacy-content article h2 {
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
 }
 
 .demo-hero {
@@ -1830,6 +1895,7 @@ footer span:first-child {
   }
 
   .school-hero,
+  .privacy-hero,
   .flutter-demo-shell {
     grid-template-columns: 1fr;
   }
@@ -1849,12 +1915,15 @@ footer span:first-child {
 
 @media (max-width: 720px) {
   .school-hero,
+  .privacy-hero,
+  .privacy-content,
   .feature-band,
   .flutter-demo-section {
     padding-inline: 20px;
   }
 
-  .school-hero h1 {
+  .school-hero h1,
+  .privacy-hero h1 {
     font-size: clamp(2.6rem, 15vw, 4.2rem);
   }
 
@@ -1867,9 +1936,7 @@ footer span:first-child {
     padding: 36px 0 0;
   }
 
-  .screen-placeholder {
-    gap: 8px;
-    padding: 28px 8px 18px;
+  .screen-shot-frame {
     border-radius: 18px;
   }
 
@@ -1898,16 +1965,8 @@ footer span:first-child {
     transform: translateX(calc(-50% + 190px + var(--drag-x))) translateY(38px) scale(0.68) rotate(4deg);
   }
 
-  .screen-card[data-offset="0"] .screen-placeholder {
+  .screen-card[data-offset="0"] .screen-shot-frame {
     border-radius: 22px;
-  }
-
-  .screen-placeholder span {
-    font-size: 1rem;
-  }
-
-  .screen-placeholder i {
-    font-size: 0.54rem;
   }
 
   .screen-card figcaption {

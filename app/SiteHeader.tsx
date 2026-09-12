@@ -51,9 +51,6 @@ export function SiteHeader() {
           </a>
         ))}
       </nav>
-      <span className="signin-link" aria-disabled="true" title="Coming soon">
-        ↪ Sign In
-      </span>
     </header>
   );
 }

@@ -2,13 +2,34 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent } from "react";
+import { sitePath } from "./site-path";
 
 const heroScreens = [
-  { label: "Clubs", tint: "146 91% 55%" },
-  { label: "Posts", tint: "327 88% 56%" },
-  { label: "Events", tint: "18 92% 58%" },
-  { label: "QR", tint: "170 80% 55%" },
-  { label: "Schedule", tint: "237 89% 61%" },
+  {
+    label: "Home",
+    image: "/screenshots/quilt-home.jpeg",
+    alt: "Quilt student home dashboard for Troy High School",
+  },
+  {
+    label: "Posts",
+    image: "/screenshots/quilt-club-posts.jpeg",
+    alt: "Student Government Association club posts in Quilt",
+  },
+  {
+    label: "Events",
+    image: "/screenshots/quilt-events.jpeg",
+    alt: "Quilt events calendar month view",
+  },
+  {
+    label: "Parents",
+    image: "/screenshots/quilt-parent-dashboard.jpeg",
+    alt: "Quilt parent dashboard with linked student information",
+  },
+  {
+    label: "Clubs",
+    image: "/screenshots/quilt-club-discovery.jpeg",
+    alt: "Quilt discover clubs sheet with search and club list",
+  },
 ];
 
 function getLoopOffset(index: number, activeIndex: number) {
@@ -129,18 +150,12 @@ export function HeroScreenScroller() {
             <figure
               className="screen-card"
               data-offset={screen.offset}
-              style={
-                {
-                  "--screen-tint": screen.tint,
-                } as CSSProperties
-              }
               aria-current={isActive ? "true" : undefined}
               aria-hidden={!isVisible}
               key={screen.label}
             >
-              <div className="screen-placeholder">
-                <span>{screen.label}</span>
-                <i>Screenshot placeholder</i>
+              <div className="screen-shot-frame">
+                <img src={sitePath(screen.image)} alt={screen.alt} draggable="false" />
               </div>
               <figcaption>{screen.label}</figcaption>
             </figure>

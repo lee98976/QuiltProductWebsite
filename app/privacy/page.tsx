@@ -1,4 +1,5 @@
 import { SiteHeader } from "../SiteHeader";
+import { sitePath } from "../site-path";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -50,22 +51,48 @@ const privacySections = [
   },
 ];
 
+const privacyHighlights = [
+  "Role-aware access",
+  "School and family views",
+  "Moderation workflows",
+];
+
 export default function PrivacyPage() {
   return (
     <main>
       <SiteHeader />
 
       <section className="privacy-hero">
-        <p className="eyebrow">Privacy</p>
-        <h1>Quilt Privacy</h1>
-        <p>
-          Last updated August 15, 2026. This draft describes the main information
-          Quilt uses to support school schedules, clubs, events, QR check-ins,
-          parent connections, moderation, and account-based access.
-        </p>
+        <div className="privacy-hero-copy">
+          <p className="eyebrow">Privacy</p>
+          <h1>Quilt Privacy</h1>
+          <p>
+            A clear view of how Quilt handles the information that keeps school
+            schedules, clubs, events, QR check-ins, parent connections,
+            moderation, and account-based access working.
+          </p>
+        </div>
+        <aside className="privacy-policy-card" aria-label="Privacy policy summary">
+          <span>Last updated</span>
+          <strong>August 15, 2026</strong>
+          <ul>
+            {privacyHighlights.map((highlight) => (
+              <li key={highlight}>{highlight}</li>
+            ))}
+          </ul>
+        </aside>
       </section>
 
-      <section className="privacy-content" aria-label="Privacy details">
+      <section className="privacy-content" aria-labelledby="privacy-details-title">
+        <div className="section-heading privacy-section-heading">
+          <p className="eyebrow">Policy Overview</p>
+          <h2 id="privacy-details-title">Built for school communities.</h2>
+          <p>
+            Quilt only works when students, families, and staff can trust that
+            each view is shaped around their role and the school context they
+            belong to.
+          </p>
+        </div>
         {privacySections.map((section) => (
           <article key={section.title}>
             <h2>{section.title}</h2>
@@ -77,13 +104,14 @@ export default function PrivacyPage() {
       <section id="contact" className="privacy-callout">
         <div>
           <p className="eyebrow">Questions</p>
-          <h2>Use this section for your final contact details.</h2>
+          <h2>Questions about Quilt privacy?</h2>
           <p>
-            Add the official Quilt support email, project owner, school contact,
-            or district contact here before publishing the policy as final.
+            Contact Quilt support at{" "}
+            <a href="mailto:quilt.support@gmail.com">quilt.support@gmail.com</a>
+            .
           </p>
         </div>
-        <Link className="secondary-action" href="/">Back to Quilt</Link>
+        <Link className="secondary-action" href={sitePath("/")}>Back to Quilt</Link>
       </section>
     </main>
   );
